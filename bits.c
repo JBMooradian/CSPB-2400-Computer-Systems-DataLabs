@@ -155,7 +155,7 @@ You are expressly forbidden to:
  *   Rating: 1
  */
 int bitOr(int x, int y) {
-  return x | y;
+  return ~(~x & ~y);
 }
 /*
  * isZero - returns 1 if x == 0, and 0 otherwise 
@@ -165,7 +165,11 @@ int bitOr(int x, int y) {
  *   Rating: 1
  */
 int isZero(int x) {
-  return 2;
+    /* Takes advantage of the def of the NOT op as logical: 1 == True, 0 == False.
+     * Therefore, if x == 0 (read as False) then NOT False == True (read as 1). Any other input will give
+     * NOT input, which is False, i.e. 0. Basically, 0 the integer overlaps with 0 the boolean.
+     */
+    return !x;
 }
 /* 
  * TMax - return maximum two's complement integer 
@@ -174,7 +178,12 @@ int isZero(int x) {
  *   Rating: 1
  */
 int tmax(void) {
-  return 2;
+    /* Had to build a scratch main.c to trial and error this one! I found that left-shifting max legal int 
+     * of 0xFF by larger and larger numbers got me closer to max, but once I went for the mathematical  
+     * definition of 2^31, I hit overflow, and got a negative close to max (-2147483393). Since this is the       * complement, I recalled the bitOr walkthrough and tried out the bitwise NOT on the shift, and I got it!
+     */
+    int x = 0xFF;
+    return ~(x << 31);
 }
 /* 
  * anyOddBit - return 1 if any odd-numbered bit in word set to 1
