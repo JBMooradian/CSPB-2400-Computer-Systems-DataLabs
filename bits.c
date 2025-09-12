@@ -179,9 +179,10 @@ int isZero(int x) {
  */
 int tmax(void) {
     /* Had to build a scratch main.c to trial and error this one! I found that left-shifting max legal int 
-     * of 0xFF by larger and larger numbers got me closer to max, but once I went for the mathematical  
-     * definition of 2^31, I hit overflow, and got a negative close to max (-2147483393). Since this is the       * complement, I recalled the bitOr walkthrough and tried out the bitwise NOT on the shift, and I got it!
-     */
+    of 0xFF by larger and larger numbers got me closer to max, but once I went for the mathematical  
+    definition of 2^31 (ignoring -1 for testing), I hit overflow, and got a negative close to max (-2147483393). 
+    Since this is the complement, I recalled the bitOr walkthrough and tried out the bitwise NOT on the shift, and I got it!
+    */
     int x = 0xFF;
     return ~(x << 31);
 }
@@ -193,8 +194,19 @@ int tmax(void) {
  *   Rating: 2
  */
 int anyOddBit(int x) {
-    return 2;
+    /* Reference: Check if 1 | 0: (X & 1 = X) Mask to 0: (X & 0 = 0). Need to create a mask that will cover 
+    each odd bit; AND-ing int x with an odd bit mask will be nonzero if an odd bit exists. From slides: 1010 = 0xA.
+    Must build full mask: 0xAAAAAAAA using bitshift and OR (Just saw the hint on DataLab report thread. Glad I'm on the right  track! The final product performs 2 OR shifts to "append" sufficient AAs to oddMask. Return bitwise NOT of mask to 0*/
+    int oddMask = 0xAA;
+    int result;
+    oddMask = (oddMask << 8) | 0xAA; /* 0xAAAA 0000 */
+    oddMask = (oddMask << 16) | oddMask; /* 0xAAAA AAAA */
+   
+    result = !(x & oddMask); /* mask all odd bits against input, and also make it a bool (troubleshooting for edge case) */
+    
+    return !result; /* Same logic as isZero: bits exist = 1; bits don't exist = 0 */
 }
+
 /* 
  * fitsBits - return 1 if x can be represented as an 
  *  n-bit, two's complement integer.
@@ -205,7 +217,18 @@ int anyOddBit(int x) {
  *   Rating: 2
  */
 int fitsBits(int x, int n) {
-  return 2;
+    /* We're tracking the number of bits an int can fit within, and comparing it to input n. I like to think of this trick as a "compactor". First, find how big the compactor is by determining the number of unused bits (total - n). Next, turn on the compactor by left shifting input x all the way to the "wall" of the MSB, leaving only enough room for int n (fit size). Finally, turn off the compactor by right shifting the result back to normal. If x fits, its value will be retained even after this squish and stretch, so compare the transformed x with the original. It's important that the right shift is arithmetic (standard for this machine), because the "squish" part (left shift) is determining the bit size of the two's complement of x, not x itself. That way, "danger zones" like (-4, 3) will retain x's signage by stretching a series of 1's back across the compactor. Kind of a gross image!*/
+    
+    int result;
+    int num_bits = 32 + ~(n) + 1;
+    int left_flood = (x << num_bits);
+
+    int arith_right = (left_flood >> num_bits);
+
+    result = (x ^ arith_right);
+
+    return !result;
+    
 }
 /* 
  * leastBitPos - return a mask that marks the position of the
@@ -216,8 +239,10 @@ int fitsBits(int x, int n) {
  *   Rating: 2 
  */
 int leastBitPos(int x) {
-  return 2;
+    /* This one took me a long time. I implemented an isZero check that worked fine, but getting the mask to work was killer. I stepped through every combination of operations between a large/small mask (partially for learning), but nothing was getting close. There's an example of a get_MSB function in the textbook, but I couldn't find a feasible inverse. Finally, I had to look it up, and learned about the x & -x solution, implemented here. I also learned that the isZero check I put together was unnecessary. Whew! */
+    return x & (~(x) + 1);
 }
+
 /* 
  * isAsciiDigit - return 1 if 0x30 <= x <= 0x39 (ASCII codes for characters '0' to '9')
  *   Example: isAsciiDigit(0x35) = 1.
@@ -228,7 +253,18 @@ int leastBitPos(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+    /* I spent a long time on fitsBits translating the test code verbatim to bitwise, and that was a massive help for this puzzle. Essentially, lessCheck takes x - the min, and 'less' holds the MSB, which, if 1, means the difference was negative, i.e. x < min. greaterCheck/greater does the same in reverse. Finally, less and greater are OR'd together, and, since either flagging as True puts x out of range, the ! of the OR is returned.
+    */
+    int max_digit = 0x39;
+    int min_digit = 0x30;
+
+    int lessCheck = (x + (~min_digit + 1));
+    int less = (lessCheck >> 31) & 0x1;
+    
+    int greaterCheck = (max_digit + (~x + 1));
+    int greater = (greaterCheck >> 31) & 0x1;
+
+    return !(less | greater);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -238,7 +274,18 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+    /* I was initially confused why this puzzle had such a high ops threshold; I just added 1 to y and copy/pasted lessCheck from above. Then I ran the tests, and saw the problem. It was also good that I needlessly added a if/then check on my first attempt at leastBitPos, because I had a better foundation to figure one out here. I spent a while building a check for when x is TMin and y is TMax, only to hit another bump when both are set to TMin. I realized I had neglected the "equal" part of <=, so adding another check on the sign of the difference resolved cases where both inputs are negative and equal.
+    */
+    int x_sign = (x >> 31) & 0x1;
+    int y_sign = (y >> 31) & 0x1;
+    int sameSign = x_sign ^ y_sign;
+    
+    int difference = (x + (~y + 1));
+    int diff_sign = (difference >> 31) & 0x1;
+    int is_equal = !difference;
+    int lessEq = diff_sign | is_equal;
+    
+    return (x_sign & sameSign) | (lessEq & ~(sameSign));
 }
 /* 
  * reverseBytes - reverse the bytes of x
@@ -285,6 +332,11 @@ int trueFiveEighths(int x)
 {
     return 2;
 }
+
+
+
+
+
 /*
  * Extra credit
  */
