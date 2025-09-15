@@ -255,7 +255,9 @@ int main() {
     
     int checkOver = trueFiveEighths(0x30000000);
     int checkneg = trueFiveEighths(-9);
-    
+
+    int proof = 0xFF | (0xFF << 8);
+    printf("Proof = 0x%X\n", proof);
     
     printf("trueFiveEighths control = 0x%X\n", control);
     printf("selftest = 0x%X\n", selftest);

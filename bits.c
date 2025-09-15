@@ -346,21 +346,32 @@ int reverseBytes(int x) {
 int bitCount(int x) {
     /* This was a whopper. It took me a few hours to figure out how to construct masks that would produce a single-word count for each
     number of bits. I have many lines of printfs in my scratch.c, but I finally managed to crack it. Then, it took me at least another
-    two hours to figure out why my code was passing btest but throwing undeclared errors on driver. After a few searches, I realized I needed
-    to collapse the "anyOddBit" model I was using into single lines, and then perform the final operations on x sequentially, after all of the
-    masks were declared. */ 
+    two hours to figure out why my code was passing btest but throwing undeclared errors on driver. I finally figured out a workaround, where I
+    use the same anyOddBits build, but I retitle the first half of long builds with the prefix 'prep', so driver considers it a unique variable.
+    In this argument with driver, I learned the difference of passing variables through two layers of changes and doing single operations. I
+    may be wrong about this, but I think the reason x can have multiple transformations is that it is the input variable, which acts like a
+    "global" in the function space. Wheras each mask I am building needs to be separated into different ints, rather than "declaring" them on
+    each transforming line. Hence prepBits to build bits. */
     
-    int everyOther = 0x55 | (0x55 << 8) | (0x55 << 16) | (0x55 << 24);
-    int nibbles = 0x33 | (0x33 << 8) | (0x33 << 16) | (0x33 << 24);
-    int bytes = 0x0F | (0x0F << 8) | (0x0F << 16) | (0x0F << 24);
-    int lsHalf = 0xFF | (0xFF << 16);
-    int msHalf = 0xFF | (0xFF << 8);
+    int prepBits = 0x55 | (0x55 << 8); 
+    int bits = prepBits | (prepBits << 16); /* 0x55555555 or 0101 0101 etc*/
+    
+    int prepPairs = 0x33 | (0x33 << 8); 
+    int pairs = prepPairs | (prepPairs << 16); /* 0x33333333 or 0011 0011 etc*/
 
-    x = (x & everyOther) + ((x >> 1) & everyOther);
-    x = (x & nibbles) + ((x >> 2) & nibbles);
-    x = (x & bytes) + ((x >> 4) & bytes);
-    x = (x & lsHalf) + ((x >> 8) & lsHalf);
-    x = (x & msHalf) + ((x >> 16) & msHalf);
+    int prepNibbles = 0x0F | (0x0F << 8);
+    int nibbles = prepNibbles | (prepNibbles << 16); /* 0x0F0F0F0F or 0000 1111 etc */
+    
+    int bytes = 0xFF | (0xFF << 16); /* 0x00FF00FF or 00000000 11111111 etc */
+    
+    int words = 0xFF | (0xFF << 8); /* 0x0000FFFF or half zeros half ones */
+
+    x = (x & bits) + ((x >> 1) & bits);
+    x = (x & pairs) + ((x >> 2) & pairs);
+    x = (x & nibbles) + ((x >> 4) & nibbles);
+    x = (x & bytes) + ((x >> 8) & bytes);
+    x = (x & words) + ((x >> 16) & words);
+    
     return x;
 }
 
